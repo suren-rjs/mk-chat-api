@@ -45,9 +45,15 @@ const ChannelSchema = new mongoose.Schema({
   members: Array
 })
 
+const UserSchema =  new mongoose.Schema({
+  username:String,
+  channelId:String 
+})
+
 const Messages = mongoose.model('Messages', MessageSchema)
 const Space = mongoose.model('Space', SpaceSchema)
 const Channel = mongoose.model('Channel', ChannelSchema)
+const User = mongoose.model('user', UserSchema)
 
 app.use(bodyParser.json())
 
@@ -177,6 +183,27 @@ app.put('/message/channel/:id/:status/:userId', async (req, res) => {
     console.error(error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
+})
+
+// User CRUD
+
+app.post('/user/subscribe/:id', async (req, res) => {
+  const user = req.body
+  user.channelId = req.params.id
+  const userChannel = await User.create(user)
+  res.json(userChannel)
+})
+
+app.get('/user/subcriptions/:id', async (req, res) => {
+  const query = { username: req.params.id }
+  const sort = { length: -1 }
+  const userChannels = await User.find(query).sort(sort)
+  res.json(userChannels)
+})
+
+app.delete('/user/unsubscribe/:id', async (req, res) => {
+  await User.findByIdAndDelete(req.params.id)
+  res.json({ message: 'Channel Deleted !' })
 })
 
 app.get('/', async (req, res) => {
