@@ -24,6 +24,7 @@ const MessageSchema = new mongoose.Schema({
   isEditedMessage: Boolean,
   mentionedMessageId: String,
   recepientId: String,
+  senderId: String,
   media: Array,
   recipients: Array,
   readers: Array
@@ -53,7 +54,10 @@ app.use(bodyParser.json())
 // Space CRUD
 
 app.post('/space/create', async (req, res) => {
-  const space = await Space.create(req.body)
+  let message = req.body;
+  let id = message.sender + "-" + message.receiver
+  message.id = id
+  const space = await Space.create(message)
   res.json(space)
 })
 
@@ -79,11 +83,17 @@ app.delete('/space/delete/:id', async (req, res) => {
 // In Person Message CRUD
 
 app.post('/message/space/:id', async (req, res) => {
-  const msg = req.body
-  msg.spaceId = req.params.id
-  msg.status = 'Send'
-  const message = await Messages.create(msg)
-  res.json(message)
+  try {
+    const msg = req.body
+    msg.spaceId = req.params.id
+    msg.status = 'Send'
+    msg.createdDate = new Date()
+    const message = await Messages.create(msg)
+    res.json(message)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Internal Server Error' })
+  }
 })
 
 app.get('/message/space/:id', async (req, res) => {
@@ -109,7 +119,7 @@ app.put('/message/space/:id/:status', async (req, res) => {
       return res.status(404).json({ error: 'Message not found' })
     }
 
-    msg.isDeletedFromSender = true
+    msg.isDeletedFromSender = false
     msg.status = req.params.status
 
     const updatedMessage = await Messages.findByIdAndUpdate(req.params.id, msg, { new: true })
